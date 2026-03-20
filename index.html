@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Goal Tracker</title>
+</head>
+<body>
+    <h1>Daily Goal Tracker</h1>
+
+    <h3 id="dateDisplay"></h3>
+    <button onclick="changeDate(-1)">⬅ Previous</button>
+    <button onclick="changeDate(1)">Next ➡</button>
+
+    <br><br>
+
+    <input type="checkbox" id="wake" onchange="markDone()"> Wake up at 6<br>
+    <input type="checkbox" id="exercise" onchange="markDone()"> Exercise<br>
+    <input type="checkbox" id="learn" onchange="markDone()"> Learn coding<br>
+    <input type="checkbox" id="junk" onchange="markDone()"> No Junk Food<br>
+    <input type="checkbox" id="sales" onchange="markDone()"> Daily sales<br>
+    <input type="checkbox" id="sleep" onchange="markDone()"> Sleep at 11pm<br>
+
+    <h2>Monthly Stats</h2>
+    <p id="totalDays"></p>
+    <p id="successDays"></p>
+    <p id="successRate"></p>
+
+<script>
+let currentDate = new Date();
+const ids = ["wake", "exercise", "learn", "junk", "sales", "sleep"];
+
+function formatDate(date) {
+    return date.toISOString().split("T")[0];
+}
+
+function changeDate(offset) {
+    currentDate.setDate(currentDate.getDate() + offset);
+    loadDataForDate();
+}
+
+// ✅ SAVE DATA
+function markDone() {
+    const dateStr = formatDate(currentDate);
+
+    let habits = {};
+    ids.forEach(id => {
+        habits[id] = document.getElementById(id).checked;
+    });
+
+    fetch("http://localhost:3000/save", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            date: dateStr,
+            habits: habits
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log("Saved:", data);
+    })
+    .catch(err => {
+        console.error("Error:", err);
+    });
+}
+
+// ✅ LOAD DATA
+function loadDataForDate() {
+    const dateStr = formatDate(currentDate);
+
+    document.getElementById("dateDisplay").innerText =
+        currentDate.toDateString();
+
+    fetch(`http://localhost:3000/get/${dateStr}`)
+        .then(res => res.json())
+        .then(data => {
+            ids.forEach(id => {
+                document.getElementById(id).checked = data[id] || false;
+            });
+        });
+}
+
+// ✅ STATS
+function calculateStats() {
+    fetch("http://localhost:3000/all")
+        .then(res => res.json())
+        .then(allData => {
+
+            let totalDays = 0;
+            let successDays = 0;
+
+            for (let date in allData) {
+                totalDays++;
+
+                let allDone = Object.values(allData[date]).every(v => v === true);
+                if (allDone) successDays++;
+            }
+
+            let successRate = totalDays === 0 ? 0 :
+                ((successDays / totalDays) * 100).toFixed(2);
+
+            document.getElementById("totalDays").innerText =
+                "Total Days: " + totalDays;
+
+            document.getElementById("successDays").innerText =
+                "Successful Days: " + successDays;
+
+            document.getElementById("successRate").innerText =
+                "Success Rate: " + successRate + "%";
+        });
+}
+
+window.onload = function() {
+    loadDataForDate();
+    calculateStats();
+};
+</script>
+</body>
+</html>
