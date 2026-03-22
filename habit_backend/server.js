@@ -1,9 +1,15 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
+
+// ✅ serve index.html
+app.use(express.static(path.join(__dirname, "..")));
 
 let database = {}; // temporary (later DB)
 
@@ -25,7 +31,7 @@ app.get("/get/:date", (req, res) => {
     res.json(database[date] || {});
 });
 
-// ✅ GET ALL DATA (for stats)
+// ✅ GET ALL DATA
 app.get("/all", (req, res) => {
     res.json(database);
 });
